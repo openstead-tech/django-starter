@@ -1,13 +1,17 @@
 import os
+from pathlib import Path
 from urllib.parse import unquote, urlparse
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
+from django.shortcuts import render
 from django.urls import path
 
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 DEBUG = False
 ALLOWED_HOSTS = ['*']
 ROOT_URLCONF = __name__
+BASE_DIR = Path(__file__).resolve().parent
 INSTALLED_APPS = []
+TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIRS': [BASE_DIR / 'templates']}]
 MIDDLEWARE = ['django.middleware.security.SecurityMiddleware']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True
@@ -18,6 +22,13 @@ DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', 'NAME': unqu
     'PORT': parsed.port or 5432, 'CONN_MAX_AGE': 60}}
 
 def index(request):
+    return render(request, 'index.html')
+
+def starter_css(request):
+    # A fixed, public asset path also works with DEBUG=False under Gunicorn.
+    return FileResponse((BASE_DIR / 'static' / 'starter.css').open('rb'), content_type='text/css')
+
+def api_index(request):
     return JsonResponse({'application': 'Django starter', 'message': 'Your application is ready.'})
 
 def health(request):
@@ -30,7 +41,7 @@ def health(request):
         ready = False
     return JsonResponse({'ok': ready}, status=200 if ready else 503)
 
-urlpatterns = [path('', index), path('health', health)]
+urlpatterns = [path('', index), path('starter.css', starter_css), path('api/', api_index), path('health', health)]
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app')
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
